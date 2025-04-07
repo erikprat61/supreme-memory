@@ -1,4 +1,4 @@
-namespace SoundTranscriber;
+namespace ConsoleApp;
 
 public class FileManager
 {

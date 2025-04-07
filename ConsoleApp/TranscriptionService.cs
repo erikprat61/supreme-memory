@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace SoundTranscriber;
+namespace ConsoleApp;
 
 public class TranscriptionService
 {

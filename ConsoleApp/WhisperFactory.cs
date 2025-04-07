@@ -1,4 +1,4 @@
-namespace SoundTranscriber;
+namespace ConsoleApp;
 
 /// <summary>
 /// This is a wrapper class to expose the Whisper.net.WhisperFactory for use in our application.

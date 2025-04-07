@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace SoundTranscriber;
+namespace ConsoleApp;
 
 public class AudioMonitor : IDisposable
 {

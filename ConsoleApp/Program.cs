@@ -1,4 +1,4 @@
-﻿using SoundTranscriber;
+﻿using ConsoleApp;
 
 Console.WriteLine("Audio Transcription Service Starting...");
 

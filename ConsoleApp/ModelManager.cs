@@ -1,6 +1,6 @@
 using Whisper.net.Ggml;
 
-namespace SoundTranscriber;
+namespace ConsoleApp;
 
 public class ModelManager
 {
