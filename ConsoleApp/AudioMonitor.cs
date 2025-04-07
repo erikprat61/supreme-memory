@@ -170,7 +170,7 @@ public class AudioMonitor : IDisposable
     {
         return Path.Combine(
             _outputDirectory,
-            $"{_recordingStartTime.ToString("HH-mm-ss")}_recording_part{partNumber}.wav"
+            $"{_recordingStartTime:HH-mm-ss}_recording_part{partNumber}.wav"
         );
     }
 
@@ -211,12 +211,12 @@ public class AudioMonitor : IDisposable
         _currentFileSize = 0;
         _recordingParts.Clear();
 
-        Console.WriteLine($"Recording started at {_recordingStartTime.ToString("HH:mm:ss")}");
+        Console.WriteLine($"Recording started at {_recordingStartTime:HH:mm:ss}");
 
         // Create file for recording
         _currentFilePath = Path.Combine(
             _outputDirectory,
-            $"{_recordingStartTime.ToString("HH-mm-ss")}_recording.wav"
+            $"{_recordingStartTime:HH-mm-ss}_recording.wav"
         );
 
         // Initialize the writer with the Whisper format directly
@@ -239,7 +239,7 @@ public class AudioMonitor : IDisposable
         TimeSpan duration = recordingEndTime - _recordingStartTime;
 
         Console.WriteLine(
-            $"Recording stopped at {recordingEndTime.ToString("HH:mm:ss")}, duration: {duration.TotalSeconds:F1} seconds"
+            $"Recording stopped at {recordingEndTime:HH:mm:ss}, duration: {duration.TotalSeconds:F1} seconds"
         );
 
         // Close the writer
@@ -279,7 +279,7 @@ public class AudioMonitor : IDisposable
         {
             // Single file case - just rename it with final timestamp
             string newFileName =
-                $"{_recordingStartTime.ToString("HH-mm-ss")}_to_{recordingEndTime.ToString("HH-mm-ss")}.wav";
+                $"{_recordingStartTime:HH-mm-ss}_to_{recordingEndTime:HH-mm-ss}.wav";
             string newFilePath = Path.Combine(_outputDirectory, newFileName);
 
             try
@@ -309,7 +309,7 @@ public class AudioMonitor : IDisposable
             for (int i = 0; i < _recordingParts.Count; i++)
             {
                 string newFileName =
-                    $"{_recordingStartTime.ToString("HH-mm-ss")}_to_{recordingEndTime.ToString("HH-mm-ss")}_part{i + 1}.wav";
+                    $"{_recordingStartTime:HH-mm-ss}_to_{recordingEndTime:HH-mm-ss}_part{i + 1}.wav";
                 string newFilePath = Path.Combine(_outputDirectory, newFileName);
 
                 try

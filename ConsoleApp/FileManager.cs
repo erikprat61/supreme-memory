@@ -30,14 +30,7 @@ public class FileManager
     {
         string fileName;
 
-        if (partNumber > 0)
-        {
-            fileName = $"{timestamp.ToString("HH-mm-ss")}_recording_part{partNumber}.wav";
-        }
-        else
-        {
-            fileName = $"{timestamp.ToString("HH-mm-ss")}_recording.wav";
-        }
+        fileName = $"{timestamp:HH-mm-ss}_recording_part{partNumber}.wav";
 
         return Path.Combine(outputDirectory, fileName);
     }
@@ -58,11 +51,11 @@ public class FileManager
         if (partNumber > 0)
         {
             newFileName =
-                $"{startTime.ToString("HH-mm-ss")}_to_{endTime.ToString("HH-mm-ss")}_part{partNumber}.wav";
+                $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_part{partNumber}.wav";
         }
         else
         {
-            newFileName = $"{startTime.ToString("HH-mm-ss")}_to_{endTime.ToString("HH-mm-ss")}.wav";
+            newFileName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}.wav";
         }
 
         string newPath = Path.Combine(directory, newFileName);
@@ -129,7 +122,7 @@ public class FileManager
         {
             // Create a combined transcription file
             string baseName =
-                $"{startTime.ToString("HH-mm-ss")}_to_{endTime.ToString("HH-mm-ss")}_combined";
+                $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_combined";
             string transcriptionFilePath = Path.Combine(outputDirectory, $"{baseName}.txt");
 
             // Create combined transcript
