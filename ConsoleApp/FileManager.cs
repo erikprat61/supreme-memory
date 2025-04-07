@@ -50,8 +50,7 @@ public class FileManager
 
         if (partNumber > 0)
         {
-            newFileName =
-                $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_part{partNumber}.wav";
+            newFileName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_part{partNumber}.wav";
         }
         else
         {
@@ -121,8 +120,7 @@ public class FileManager
         try
         {
             // Create a combined transcription file
-            string baseName =
-                $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_combined";
+            string baseName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_combined";
             string transcriptionFilePath = Path.Combine(outputDirectory, $"{baseName}.txt");
 
             // Create combined transcript
