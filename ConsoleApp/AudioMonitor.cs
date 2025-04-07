@@ -274,71 +274,49 @@ public class AudioMonitor : IDisposable
 
     private void ProcessRecording(DateTime recordingEndTime)
     {
-        // Process files differently based on if we have multiple parts or not
-        if (_recordingParts.Count == 1)
+        List<string> finalPaths = new List<string>();
+
+        // Always treat recordings as parts, even if there's only one
+        for (int i = 0; i < _recordingParts.Count; i++)
         {
-            // Single file case - just rename it with final timestamp
+            // Always add part suffix regardless of number of parts
+            string partSuffix = $"_part{i + 1}";
             string newFileName =
-                $"{_recordingStartTime:HH-mm-ss}_to_{recordingEndTime:HH-mm-ss}.wav";
+                $"{_recordingStartTime:HH-mm-ss}_to_{recordingEndTime:HH-mm-ss}{partSuffix}.wav";
             string newFilePath = Path.Combine(_outputDirectory, newFileName);
 
             try
             {
-                File.Move(_recordingParts[0], newFilePath);
-
-                // Process transcription in background
-                Task.Run(() => _transcriptionService.TranscribeAudioFile(newFilePath));
+                // Move the audio file
+                File.Move(_recordingParts[i], newFilePath);
+                finalPaths.Add(newFilePath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error renaming file: {ex.Message}");
-
-                // If renaming fails, transcribe with the original name
-                Task.Run(() => _transcriptionService.TranscribeAudioFile(_recordingParts[0]));
+                Console.WriteLine($"Error renaming file part {i + 1}: {ex.Message}");
+                // If renaming fails, use the original path
+                finalPaths.Add(_recordingParts[i]);
             }
         }
-        else
+
+        // Process transcriptions - first transcribe individual files
+        foreach (string path in finalPaths)
         {
-            // Multiple files case - rename each with final timestamp and create combined transcript
-            Console.WriteLine(
-                $"Processing multi-part recording with {_recordingParts.Count} parts"
+            Task.Run(() => _transcriptionService.TranscribeAudioFile(path));
+        }
+
+        // Then create combined transcription for all recordings (even single files)
+        if (finalPaths.Count > 0)
+        {
+            Task.Run(
+                () =>
+                    _transcriptionService.ProcessMultiPartRecording(
+                        finalPaths,
+                        _recordingStartTime,
+                        recordingEndTime,
+                        _outputDirectory
+                    )
             );
-
-            List<string> finalPaths = new List<string>();
-
-            for (int i = 0; i < _recordingParts.Count; i++)
-            {
-                string newFileName =
-                    $"{_recordingStartTime:HH-mm-ss}_to_{recordingEndTime:HH-mm-ss}_part{i + 1}.wav";
-                string newFilePath = Path.Combine(_outputDirectory, newFileName);
-
-                try
-                {
-                    // Move the audio file
-                    File.Move(_recordingParts[i], newFilePath);
-                    finalPaths.Add(newFilePath);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error renaming file part {i + 1}: {ex.Message}");
-                    // If renaming fails, use the original path
-                    finalPaths.Add(_recordingParts[i]);
-                }
-            }
-
-            // Create combined transcript
-            if (finalPaths.Count > 0)
-            {
-                Task.Run(
-                    () =>
-                        _transcriptionService.ProcessMultiPartRecording(
-                            finalPaths,
-                            _recordingStartTime,
-                            recordingEndTime,
-                            _outputDirectory
-                        )
-                );
-            }
         }
     }
 
