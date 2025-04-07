@@ -7,10 +7,10 @@ var fileManager = new FileManager();
 var modelManager = new ModelManager();
 
 // Ensure output directory exists
-string baseDirectory = fileManager.CreateOutputDirectory();
+var baseDirectory = fileManager.CreateOutputDirectory();
 
 // Check if model exists, download if needed
-string modelPath = await modelManager.EnsureModelExists();
+var modelPath = await modelManager.EnsureModelExists();
 
 // Initialize Whisper model
 Console.WriteLine("Loading Whisper model...");
@@ -27,9 +27,6 @@ using var audioMonitor = new AudioMonitor(baseDirectory, transcriptionService);
 await audioMonitor.StartMonitoring();
 
 // Wait for ESC key to exit
-while (Console.ReadKey(true).Key != ConsoleKey.Escape)
-{
-    Thread.Sleep(100);
-}
+while (Console.ReadKey(true).Key != ConsoleKey.Escape) Thread.Sleep(100);
 
 Console.WriteLine("Shutting down...");

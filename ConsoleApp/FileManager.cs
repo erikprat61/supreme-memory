@@ -2,16 +2,16 @@ namespace ConsoleApp;
 
 public class FileManager
 {
-    private object _fileOperationLock = new object();
+    private readonly Lock _fileOperationLock = new();
 
     /// <summary>
-    /// Creates the output directory for audio recordings and transcriptions
+    ///     Creates the output directory for audio recordings and transcriptions
     /// </summary>
     /// <returns>The path to the output directory</returns>
     public string CreateOutputDirectory()
     {
         // Create output directory with date
-        string baseDirectory = Path.Combine(
+        var baseDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "AudioTranscriptions",
             DateTime.Now.ToString("yyyy-MM-dd")
@@ -24,78 +24,21 @@ public class FileManager
     }
 
     /// <summary>
-    /// Creates a new wave file for recording
-    /// </summary>
-    public string CreateWaveFilePath(string outputDirectory, DateTime timestamp, int partNumber = 0)
-    {
-        string fileName;
-
-        fileName = $"{timestamp:HH-mm-ss}_recording_part{partNumber}.wav";
-
-        return Path.Combine(outputDirectory, fileName);
-    }
-
-    /// <summary>
-    /// Renames a recording file with start and end timestamps
-    /// </summary>
-    public string RenameRecordingWithTimeRange(
-        string originalPath,
-        DateTime startTime,
-        DateTime endTime,
-        int partNumber = 0
-    )
-    {
-        string directory = Path.GetDirectoryName(originalPath)!;
-        string newFileName;
-
-        if (partNumber > 0)
-        {
-            newFileName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}_part{partNumber}.wav";
-        }
-        else
-        {
-            newFileName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}.wav";
-        }
-
-        string newPath = Path.Combine(directory, newFileName);
-
-        try
-        {
-            lock (_fileOperationLock)
-            {
-                File.Move(originalPath, newPath);
-            }
-
-            return newPath;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error renaming file: {ex.Message}");
-            // If renaming fails, return the original path
-            return originalPath;
-        }
-    }
-
-    /// <summary>
-    /// Writes a transcription to a text file
+    ///     Writes a transcription to a text file
     /// </summary>
     public void WriteTranscriptionToFile(string transcriptionText, string audioFilePath)
     {
-        string transcriptionFilePath = Path.ChangeExtension(audioFilePath, ".txt");
+        var transcriptionFilePath = Path.ChangeExtension(audioFilePath, ".txt");
 
         try
         {
             lock (_fileOperationLock)
             {
                 // Use FileMode.Create to overwrite any existing file
-                using (
-                    var writer = new StreamWriter(
-                        new FileStream(transcriptionFilePath, FileMode.Create, FileAccess.Write)
-                    )
-                )
-                {
-                    writer.Write(transcriptionText);
-                }
+                using var writer = new StreamWriter(
+                    new FileStream(transcriptionFilePath, FileMode.Create, FileAccess.Write)
+                );
+                writer.Write(transcriptionText);
             }
         }
         catch (Exception ex)
@@ -105,7 +48,7 @@ public class FileManager
     }
 
     /// <summary>
-    /// Creates a combined transcription file from one or more part transcriptions
+    ///     Creates a combined transcription file from one or more part transcriptions
     /// </summary>
     public void CreateCombinedTranscriptionFile(
         List<string> audioPaths,
@@ -120,8 +63,8 @@ public class FileManager
         try
         {
             // Create a combined transcription file - always called "combined.txt"
-            string baseName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}";
-            string transcriptionFilePath = Path.Combine(
+            var baseName = $"{startTime:HH-mm-ss}_to_{endTime:HH-mm-ss}";
+            var transcriptionFilePath = Path.Combine(
                 outputDirectory,
                 $"{baseName}_combined.txt"
             );
@@ -129,40 +72,38 @@ public class FileManager
             // Create combined transcript
             lock (_fileOperationLock)
             {
-                using (StreamWriter writer = new StreamWriter(transcriptionFilePath))
+                using var writer = new StreamWriter(transcriptionFilePath);
+                // Always use the combined transcription header regardless of parts count
+                writer.WriteLine(
+                    $"--- Combined transcription of {audioPaths.Count} audio parts ---"
+                );
+                writer.WriteLine($"Recording time: {startTime} to {endTime}");
+                writer.WriteLine();
+
+                for (var i = 0; i < audioPaths.Count; i++)
                 {
-                    // Always use the combined transcription header regardless of parts count
-                    writer.WriteLine(
-                        $"--- Combined transcription of {audioPaths.Count} audio parts ---"
-                    );
-                    writer.WriteLine($"Recording time: {startTime} to {endTime}");
-                    writer.WriteLine();
+                    var partPath = audioPaths[i];
+                    var partName = Path.GetFileName(partPath);
 
-                    for (int i = 0; i < audioPaths.Count; i++)
+                    // Get transcription file path
+                    var partTranscriptionPath = Path.ChangeExtension(partPath, ".txt");
+
+                    // Always add part headers, even for single recordings
+                    writer.WriteLine($"--- Part {i + 1}: {partName} ---");
+
+                    if (File.Exists(partTranscriptionPath))
                     {
-                        string partPath = audioPaths[i];
-                        string partName = Path.GetFileName(partPath);
-
-                        // Get transcription file path
-                        string partTranscriptionPath = Path.ChangeExtension(partPath, ".txt");
-
-                        // Always add part headers, even for single recordings
-                        writer.WriteLine($"--- Part {i + 1}: {partName} ---");
-
-                        if (File.Exists(partTranscriptionPath))
-                        {
-                            // Read existing transcription
-                            string partTranscription = File.ReadAllText(partTranscriptionPath);
-                            writer.WriteLine(partTranscription);
-                        }
-                        else
-                        {
-                            writer.WriteLine("[Transcription not available]");
-                        }
-
-                        // Always add a newline after each part
-                        writer.WriteLine();
+                        // Read existing transcription
+                        var partTranscription = File.ReadAllText(partTranscriptionPath);
+                        writer.WriteLine(partTranscription);
                     }
+                    else
+                    {
+                        writer.WriteLine("[Transcription not available]");
+                    }
+
+                    // Always add a newline after each part
+                    writer.WriteLine();
                 }
             }
 
@@ -178,9 +119,9 @@ public class FileManager
     }
 
     /// <summary>
-    /// Deletes all files with "part" in the filename from the specified directory
+    ///     Deletes all files with "part" in the filename from the specified directory
     /// </summary>
-    public void DeletePartFiles(string directory)
+    private static void DeletePartFiles(string directory)
     {
         try
         {
@@ -189,8 +130,7 @@ public class FileManager
 
             Console.WriteLine($"Found {partFiles.Length} part files to delete");
 
-            foreach (string file in partFiles)
-            {
+            foreach (var file in partFiles)
                 try
                 {
                     File.Delete(file);
@@ -202,7 +142,6 @@ public class FileManager
                         $"Error deleting file {Path.GetFileName(file)}: {ex.Message}"
                     );
                 }
-            }
         }
         catch (Exception ex)
         {

@@ -1,14 +1,14 @@
 namespace ConsoleApp;
 
 /// <summary>
-/// This is a wrapper class to expose the Whisper.net.WhisperFactory for use in our application.
-/// We need this because the original code uses the WhisperFactory directly, but our refactored
-/// code needs to reference it from our namespace.
+///     This is a wrapper class to expose the Whisper.net.WhisperFactory for use in our application.
+///     We need this because the original code uses the WhisperFactory directly, but our refactored
+///     code needs to reference it from our namespace.
 /// </summary>
 public static class WhisperFactory
 {
     /// <summary>
-    /// Creates a WhisperFactory from a model file path
+    ///     Creates a WhisperFactory from a model file path
     /// </summary>
     /// <param name="modelPath">Path to the Whisper model file</param>
     /// <returns>A WhisperFactory instance</returns>

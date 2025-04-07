@@ -5,12 +5,12 @@ namespace ConsoleApp;
 public class ModelManager
 {
     /// <summary>
-    /// Ensures the Whisper model exists, downloading it if needed
+    ///     Ensures the Whisper model exists, downloading it if needed
     /// </summary>
     /// <returns>The path to the Whisper model file</returns>
     public async Task<string> EnsureModelExists()
     {
-        string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ggml-base.bin");
+        var modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ggml-base.bin");
 
         if (!File.Exists(modelPath))
         {
@@ -22,13 +22,13 @@ public class ModelManager
     }
 
     /// <summary>
-    /// Downloads the Whisper model
+    ///     Downloads the Whisper model
     /// </summary>
     /// <param name="path">The path where the model will be saved</param>
     private async Task DownloadModel(string path)
     {
         // Create HttpClient and downloader instance
-        using var httpClient = new System.Net.Http.HttpClient();
+        using var httpClient = new HttpClient();
         var downloader = new WhisperGgmlDownloader(httpClient);
 
         // Download the model

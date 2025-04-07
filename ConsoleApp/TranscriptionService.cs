@@ -4,8 +4,8 @@ namespace ConsoleApp;
 
 public class TranscriptionService
 {
-    private readonly Whisper.net.WhisperFactory _whisperFactory;
     private readonly FileManager _fileManager;
+    private readonly Whisper.net.WhisperFactory _whisperFactory;
 
     public TranscriptionService(Whisper.net.WhisperFactory whisperFactory, FileManager fileManager)
     {
@@ -14,11 +14,11 @@ public class TranscriptionService
     }
 
     /// <summary>
-    /// Transcribes a single audio file
+    ///     Transcribes a single audio file
     /// </summary>
     public async Task TranscribeAudioFile(string audioFilePath)
     {
-        string filename = Path.GetFileName(audioFilePath);
+        var filename = Path.GetFileName(audioFilePath);
         Console.WriteLine($"Transcribing {filename}...");
 
         try
@@ -47,11 +47,8 @@ public class TranscriptionService
                 var segmentsResult = processor.ProcessAsync(fileStream);
 
                 // Build transcription from results
-                StringBuilder transcription = new StringBuilder();
-                await foreach (var segment in segmentsResult)
-                {
-                    transcription.Append(segment.Text + " ");
-                }
+                var transcription = new StringBuilder();
+                await foreach (var segment in segmentsResult) transcription.Append(segment.Text + " ");
 
                 transcriptionText = transcription.ToString().Trim();
             }
@@ -69,7 +66,7 @@ public class TranscriptionService
     }
 
     /// <summary>
-    /// Processes and transcribes a multi-part recording
+    ///     Processes and transcribes a multi-part recording
     /// </summary>
     public async Task ProcessMultiPartRecording(
         List<string> audioPaths,
@@ -86,11 +83,8 @@ public class TranscriptionService
         try
         {
             // First, transcribe each part individually
-            List<Task> transcriptionTasks = new List<Task>();
-            foreach (string audioPath in audioPaths)
-            {
-                transcriptionTasks.Add(TranscribeAudioFile(audioPath));
-            }
+            var transcriptionTasks = new List<Task>();
+            foreach (var audioPath in audioPaths) transcriptionTasks.Add(TranscribeAudioFile(audioPath));
 
             // Wait for all individual transcriptions to complete
             await Task.WhenAll(transcriptionTasks);
