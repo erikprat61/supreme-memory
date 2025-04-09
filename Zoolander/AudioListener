@@ -1,7 +1,0 @@
-namespace Zoolander
-{
-    public class AudioListener
-    {
-        // Detect sound
-    }
-}
