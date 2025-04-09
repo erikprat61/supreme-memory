@@ -1,2 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿// listen for sound
+// while (soundDetected) Begin recording audio steam
+// stop recording audio steam
+// write to file
+// listen for sound
