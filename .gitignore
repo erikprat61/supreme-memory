@@ -1,6 +1,5 @@
 # Visual Studio / .NET specific
 .vs/
-.vscode/
 bin/
 obj/
 *.user

@@ -1,0 +1,8 @@
+{
+    "editor.formatOnSave": true,
+    "dotnet.defaultSolution": "supreme-memory.sln",
+    "csharp.format.enable": true,
+    "csharp.semanticHighlighting.enabled": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true
+}
