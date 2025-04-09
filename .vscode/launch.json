@@ -2,13 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (console)",
+            "name": "Launch ConsoleApp",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net9.0/ConsoleApp.dll",
             "args": [],
             "cwd": "${workspaceFolder}/ConsoleApp",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch Zoolander",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Zoolander/bin/Debug/net9.0/Zoolander.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Zoolander",
             "console": "internalConsole",
             "stopAtEntry": false
         },
