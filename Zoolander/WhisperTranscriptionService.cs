@@ -29,7 +29,7 @@ public class WhisperTranscriptionService
     {
         // Create a processor for this transcription
         using var processor = _whisperFactory.CreateBuilder()
-            .WithLanguage("auto")  // Auto-detect language
+            .WithLanguage("en") 
             .Build();
 
         // Process the audio stream
@@ -83,7 +83,7 @@ public class WhisperTranscriptionService
             var downloader = new Whisper.net.Ggml.WhisperGgmlDownloader(httpClient);
             
             // Download the TINY model instead of base for better performance
-            using var modelStream = await downloader.GetGgmlModelAsync(Whisper.net.Ggml.GgmlType.Tiny);
+            using var modelStream = await downloader.GetGgmlModelAsync(Whisper.net.Ggml.GgmlType.LargeV3);
             using var fileStream = File.Create(modelPath);
             await modelStream.CopyToAsync(fileStream);
             

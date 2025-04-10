@@ -11,19 +11,19 @@ public class BufferedTranscriptionService : IDisposable
 {
     // Fixed audio chunk size in milliseconds - represents the ideal chunk size for transcription
     private const int CHUNK_SIZE_MS = 10000; // 10 seconds per chunk (increased from 3)
+    private const float SILENCE_THRESHOLD = 0.01f;
+    private const float VOICE_THRESHOLD = 0.025f; // Higher threshold for voice detection
+    private const float SILENCE_PERCENTAGE_THRESHOLD = 0.85f; // Skip chunks with more than 85% silence
 
     private readonly WhisperFactory _whisperFactory;
     private readonly ConcurrentQueue<byte[]> _audioChunks = new();
-    private readonly WaveFormat _whisperFormat = new(8000, 16, 1); // 8kHz, 16-bit, mono (reduced from 16kHz)
+    private readonly WaveFormat _whisperFormat = new(16000, 16, 1); // 16kHz, 16-bit, mono (required by Whisper)
     private readonly MemoryStream _currentChunkStream;
     private long _currentChunkBytes = 0;
     private readonly long _targetChunkBytes;
     private readonly Task _processingTask;
     private readonly CancellationTokenSource _cts = new();
     private DateTime _lastProcessingTime = DateTime.MinValue;
-    private const float SILENCE_THRESHOLD = 0.01f;
-    private const float VOICE_THRESHOLD = 0.025f; // Higher threshold for voice detection
-    private const float SILENCE_PERCENTAGE_THRESHOLD = 0.85f; // Skip chunks with more than 85% silence
 
     // Event that fires when new transcription text is available
     public event EventHandler<string>? TranscriptionReceived;
@@ -87,45 +87,50 @@ public class BufferedTranscriptionService : IDisposable
     }
 
     /// <summary>
-    /// Converts audio from source format to Whisper format
+    /// Forces processing of the current audio buffer
     /// </summary>
-    private byte[] ConvertAudioFormat(byte[] sourceBuffer, int bytesRecorded, WaveFormat sourceFormat)
+    public void FlushBuffer()
     {
-        // If formats match, just return a copy of the source buffer
-        if (sourceFormat.Equals(_whisperFormat))
+        lock (_currentChunkStream)
         {
-            var result = new byte[bytesRecorded];
-            Array.Copy(sourceBuffer, result, bytesRecorded);
-            return result;
+            if (_currentChunkBytes > 0)
+            {
+                // Enqueue current chunk even if it's not full
+                byte[] chunkData = _currentChunkStream.ToArray();
+                if (!IsAudioMostlySilent(chunkData))
+                {
+                    _audioChunks.Enqueue(chunkData);
+                }
+
+                // Reset for next chunk
+                _currentChunkStream.SetLength(0);
+                _currentChunkBytes = 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Disposes resources used by the transcription service
+    /// </summary>
+    public void Dispose()
+    {
+        // Cancel processing task
+        _cts.Cancel();
+
+        try
+        {
+            // Wait for processing task to complete
+            _processingTask.Wait(1000);
+        }
+        catch (AggregateException)
+        {
+            // Expected when task is cancelled
         }
 
-        // Otherwise, perform format conversion
-        using var bufferedProvider = new BufferedWaveProvider(sourceFormat);
-        bufferedProvider.AddSamples(sourceBuffer, 0, bytesRecorded);
-
-        using var converter = new MediaFoundationResampler(bufferedProvider, _whisperFormat)
-        {
-            ResamplerQuality = 60 // High quality
-        };
-
-        // Calculate output buffer size
-        var sourceBytes = sourceFormat.AverageBytesPerSecond;
-        var targetBytes = _whisperFormat.AverageBytesPerSecond;
-        var ratio = (float)targetBytes / sourceBytes;
-        var convertedSize = (int)(bytesRecorded * ratio * 1.2); // Add 20% buffer for safety
-
-        var convertedBuffer = new byte[convertedSize];
-        var bytesRead = converter.Read(convertedBuffer, 0, convertedSize);
-
-        // Trim to actual size
-        if (bytesRead < convertedSize)
-        {
-            var result = new byte[bytesRead];
-            Array.Copy(convertedBuffer, result, bytesRead);
-            return result;
-        }
-
-        return convertedBuffer;
+        // Dispose resources
+        _currentChunkStream.Dispose();
+        _cts.Dispose();
+        _whisperFactory.Dispose();
     }
 
     /// <summary>
@@ -161,8 +166,6 @@ public class BufferedTranscriptionService : IDisposable
                     // Create processor for this chunk with optimized settings
                     using var processor = _whisperFactory.CreateBuilder()
                         .WithLanguage("auto")
-                        .BeamSize(1)  // Reduces search space for faster processing
-                        .Strategy(Whisper.net.Ggml.SamplingStrategy.Greedy) // Faster decoding
                         .Build();
 
                     // Create a WAV file in memory with proper headers
@@ -217,48 +220,47 @@ public class BufferedTranscriptionService : IDisposable
     }
 
     /// <summary>
-    /// Forces processing of the current audio buffer
+    /// Converts audio from source format to Whisper format
     /// </summary>
-    public void FlushBuffer()
+    private byte[] ConvertAudioFormat(byte[] sourceBuffer, int bytesRecorded, WaveFormat sourceFormat)
     {
-        lock (_currentChunkStream)
+        // If formats match, just return a copy of the source buffer
+        if (sourceFormat.Equals(_whisperFormat))
         {
-            if (_currentChunkBytes > 0)
-            {
-                // Enqueue current chunk even if it's not full
-                byte[] chunkData = _currentChunkStream.ToArray();
-                _audioChunks.Enqueue(chunkData);
-
-                // Reset for next chunk
-                _currentChunkStream.SetLength(0);
-                _currentChunkBytes = 0;
-            }
+            var result = new byte[bytesRecorded];
+            Array.Copy(sourceBuffer, result, bytesRecorded);
+            return result;
         }
+
+        // Otherwise, perform format conversion
+        var bufferedProvider = new BufferedWaveProvider(sourceFormat);
+        bufferedProvider.AddSamples(sourceBuffer, 0, bytesRecorded);
+
+        using var converter = new MediaFoundationResampler(bufferedProvider, _whisperFormat)
+        {
+            ResamplerQuality = 60 // High quality
+        };
+
+        // Calculate output buffer size
+        var sourceBytes = sourceFormat.AverageBytesPerSecond;
+        var targetBytes = _whisperFormat.AverageBytesPerSecond;
+        var ratio = (float)targetBytes / sourceBytes;
+        var convertedSize = (int)(bytesRecorded * ratio * 1.2); // Add 20% buffer for safety
+
+        var convertedBuffer = new byte[convertedSize];
+        var bytesRead = converter.Read(convertedBuffer, 0, convertedSize);
+
+        // Trim to actual size
+        if (bytesRead < convertedSize)
+        {
+            var result = new byte[bytesRead];
+            Array.Copy(convertedBuffer, result, bytesRead);
+            return result;
+        }
+
+        return convertedBuffer;
     }
 
-    /// <summary>
-    /// Disposes resources used by the transcription service
-    /// </summary>
-    public void Dispose()
-    {
-        // Cancel processing task
-        _cts.Cancel();
-
-        try
-        {
-            // Wait for processing task to complete
-            _processingTask.Wait(1000);
-        }
-        catch (AggregateException)
-        {
-            // Expected when task is cancelled
-        }
-
-        // Dispose resources
-        _currentChunkStream.Dispose();
-        _cts.Dispose();
-        _whisperFactory.Dispose();
-    }
     /// <summary>
     /// Determines if audio contains voice activity
     /// </summary>
