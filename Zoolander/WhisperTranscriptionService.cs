@@ -6,30 +6,34 @@ namespace Zoolander;
 /// <summary>
 /// Implementation of audio transcription service using Whisper.net
 /// </summary>
-public class WhisperTranscriptionService
+public class WhisperTranscriptionService : IDisposable
 {
     private readonly WhisperFactory _whisperFactory;
+    private readonly string _language;
 
     /// <summary>
     /// Creates a new transcription service using the specified Whisper model
     /// </summary>
     /// <param name="modelPath">Path to the Whisper model file</param>
-    public WhisperTranscriptionService(string modelPath)
+    /// <param name="language">Language for transcription (use "auto" for auto-detection)</param>
+    public WhisperTranscriptionService(string modelPath, string language = "en")
     {
         // Initialize the Whisper factory with the model
         _whisperFactory = Whisper.net.WhisperFactory.FromPath(modelPath);
+        _language = language;
     }
 
     /// <summary>
     /// Transcribes an audio stream and returns the text as a string
     /// </summary>
     /// <param name="audioStream">Stream containing audio data to transcribe</param>
+    /// <param name="customLanguage">Optional language override</param>
     /// <returns>A string containing the transcription text</returns>
-    public async Task<string> TranscribeAudioAsync(Stream audioStream)
+    public async Task<string> TranscribeAudioAsync(Stream audioStream, string? customLanguage = null)
     {
         // Create a processor for this transcription
         using var processor = _whisperFactory.CreateBuilder()
-            .WithLanguage("en") 
+            .WithLanguage(customLanguage ?? _language)
             .Build();
 
         // Process the audio stream
@@ -49,8 +53,9 @@ public class WhisperTranscriptionService
     /// Transcribes an audio file and returns the text as a string
     /// </summary>
     /// <param name="audioFilePath">Path to the audio file to transcribe</param>
+    /// <param name="customLanguage">Optional language override</param>
     /// <returns>A string containing the transcription text</returns>
-    public async Task<string> TranscribeFileAsync(string audioFilePath)
+    public async Task<string> TranscribeFileAsync(string audioFilePath, string? customLanguage = null)
     {
         if (!File.Exists(audioFilePath))
         {
@@ -64,33 +69,20 @@ public class WhisperTranscriptionService
             FileShare.Read
         );
 
-        return await TranscribeAudioAsync(fileStream);
+        return await TranscribeAudioAsync(fileStream, customLanguage);
     }
 
-/// <summary>
+    /// <summary>
     /// Downloads the Whisper model if it doesn't exist
     /// </summary>
-    /// <param name="modelPath">Path where the model should be stored</param>
+    /// <param name="modelType">Type of model to download</param>
+    /// <param name="modelDirectory">Directory where the model should be stored</param>
     /// <returns>Path to the model file</returns>
-    public static async Task<string> EnsureModelExistsAsync(string modelPath)
+    public static async Task<string> EnsureModelExistsAsync(
+        WhisperModelSelector.ModelType modelType,
+        string? modelDirectory = null)
     {
-        if (!File.Exists(modelPath))
-        {
-            Console.WriteLine("Downloading Whisper model (this may take a while)...");
-            
-            // Create HttpClient and downloader
-            using var httpClient = new HttpClient();
-            var downloader = new Whisper.net.Ggml.WhisperGgmlDownloader(httpClient);
-            
-            // Download the TINY model instead of base for better performance
-            using var modelStream = await downloader.GetGgmlModelAsync(Whisper.net.Ggml.GgmlType.LargeV3);
-            using var fileStream = File.Create(modelPath);
-            await modelStream.CopyToAsync(fileStream);
-            
-            Console.WriteLine("Model downloaded successfully.");
-        }
-        
-        return modelPath;
+        return await WhisperModelSelector.EnsureModelExistsAsync(modelType, modelDirectory);
     }
 
     /// <summary>

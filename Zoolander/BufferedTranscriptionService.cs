@@ -24,17 +24,22 @@ public class BufferedTranscriptionService : IDisposable
     private readonly Task _processingTask;
     private readonly CancellationTokenSource _cts = new();
     private DateTime _lastProcessingTime = DateTime.MinValue;
+    private readonly string _language;
 
     // Event that fires when new transcription text is available
     public event EventHandler<string>? TranscriptionReceived;
 
     /// <summary>
-    /// Creates a new buffered transcription service
+    /// Creates a new buffered transcription service with the specified model
     /// </summary>
     /// <param name="modelPath">Path to the Whisper model file</param>
-    public BufferedTranscriptionService(string modelPath)
+    /// <param name="language">Language for transcription (use "auto" for automatic detection)</param>
+    public BufferedTranscriptionService(
+        string modelPath, 
+        string language = "auto")
     {
         _whisperFactory = WhisperFactory.FromPath(modelPath);
+        _language = language;
 
         // Calculate target chunk size in bytes
         _targetChunkBytes = _whisperFormat.AverageBytesPerSecond * CHUNK_SIZE_MS / 1000;
@@ -57,7 +62,7 @@ public class BufferedTranscriptionService : IDisposable
         // Convert audio format if needed
         byte[] whisperFormatBuffer = ConvertAudioFormat(sourceBuffer, bytesRecorded, sourceFormat);
 
-        // OPTIMIZATION 3: Skip if doesn't contain voice
+        // Skip if doesn't contain voice
         if (!ContainsVoice(whisperFormatBuffer))
             return;
 
@@ -73,7 +78,7 @@ public class BufferedTranscriptionService : IDisposable
                 // Finalize current chunk
                 byte[] chunkData = _currentChunkStream.ToArray();
 
-                // OPTIMIZATION 6: Skip if mostly silent
+                // Skip if mostly silent
                 if (!IsAudioMostlySilent(chunkData))
                 {
                     _audioChunks.Enqueue(chunkData);
@@ -145,7 +150,7 @@ public class BufferedTranscriptionService : IDisposable
                 // Check if we have chunks to process
                 if (_audioChunks.TryDequeue(out var chunk))
                 {
-                    // OPTIMIZATION 4: Throttle processing
+                    // Throttle processing
                     TimeSpan timeSinceLastProcess = DateTime.Now - _lastProcessingTime;
                     if (timeSinceLastProcess < TimeSpan.FromSeconds(5))
                     {
@@ -155,7 +160,7 @@ public class BufferedTranscriptionService : IDisposable
                         continue;
                     }
 
-                    // OPTIMIZATION 6: Skip if mostly silent
+                    // Skip if mostly silent
                     if (IsAudioMostlySilent(chunk))
                     {
                         continue;
@@ -165,11 +170,10 @@ public class BufferedTranscriptionService : IDisposable
 
                     // Create processor for this chunk with optimized settings
                     using var processor = _whisperFactory.CreateBuilder()
-                        .WithLanguage("auto")
+                        .WithLanguage(_language)
                         .Build();
 
                     // Create a WAV file in memory with proper headers
-                    // We need to use a temp stream and then copy because WaveFileWriter closes the stream when disposed
                     byte[] wavBytes;
                     using (var tempStream = new MemoryStream())
                     {

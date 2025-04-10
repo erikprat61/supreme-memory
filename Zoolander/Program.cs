@@ -13,6 +13,34 @@ public class Program
         Console.WriteLine("This app listens to audio and transcribes it without saving audio files.");
         Console.WriteLine("Press Ctrl+C to exit the application");
         
+        // Choose the model to use (can be changed to any model type)
+        var modelType = WhisperModelSelector.ModelType.LargeV3Turbo;
+        var language = "en"; // Set a specific language code like "en" or "fr" for better results
+        
+        // Parse command line arguments
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i].ToLower() == "--model" && i + 1 < args.Length)
+            {
+                if (Enum.TryParse<WhisperModelSelector.ModelType>(args[i + 1], true, out var parsedModel))
+                {
+                    modelType = parsedModel;
+                    i++; // Skip the next argument since we've used it
+                }
+            }
+            else if (args[i].ToLower() == "--language" && i + 1 < args.Length)
+            {
+                language = args[i + 1];
+                i++; // Skip the next argument
+            }
+        }
+        
+        // Display model information
+        var (sizeMB, ramMB, modelDescription) = WhisperModelSelector.GetModelInfo(modelType);
+        Console.WriteLine($"Using {modelType} model: {modelDescription}");
+        Console.WriteLine($"Model size: {sizeMB}MB, Recommended RAM: {ramMB}MB");
+        Console.WriteLine($"Language setting: {language}");
+        
         // Set up console cancellation handler
         Console.CancelKeyPress += (sender, e) => {
             e.Cancel = true; // Prevent the process from terminating immediately
@@ -26,28 +54,14 @@ public class Program
         var outputDirectory = fileManager.CreateOutputDirectory();
         Console.WriteLine($"Transcriptions will be logged to: {outputDirectory}");
         
-        // Parse command line arguments for runtime duration
-        int runTimeMinutes = 0;
-        if (args.Length > 0 && int.TryParse(args[0], out runTimeMinutes) && runTimeMinutes > 0)
-        {
-            Console.WriteLine($"Application will automatically exit after {runTimeMinutes} minutes");
-            
-            // Set up a timer to exit the application
-            Task.Run(async () => {
-                await Task.Delay(TimeSpan.FromMinutes(runTimeMinutes));
-                Console.WriteLine($"Automatic shutdown after {runTimeMinutes} minutes");
-                _running = false;
-                _exitEvent.Set();
-            });
-        }
-        
         // Initialize Whisper model
         Console.WriteLine("Initializing Whisper model...");
-        var modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ggml-tiny.bin");
-        await WhisperTranscriptionService.EnsureModelExistsAsync(modelPath);
+        var modelPath = await WhisperTranscriptionService.EnsureModelExistsAsync(modelType);
         
         // Create transcription service
-        using var transcriptionService = new BufferedTranscriptionService(modelPath);
+        using var transcriptionService = new BufferedTranscriptionService(
+            modelPath, 
+            language: language);
         
         // Set up transcription handling
         transcriptionService.TranscriptionReceived += (sender, text) =>
@@ -68,7 +82,7 @@ public class Program
             try 
             {
                 // Try to use console input if available
-                Console.WriteLine("Press Ctrl+C to exit the application");
+                Console.WriteLine("Press Esc to exit, Spacebar to force process current buffer");
                 
                 // Run until cancellation is requested
                 while (_running)
