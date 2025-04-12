@@ -54,7 +54,7 @@ namespace ConsoleApp
         private static int CountRecordings()
         {
             var outputDirectory = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "Data",
                 "AudioRecordings",
                 DateTime.Now.ToString("yyyy-MM-dd")
             );
@@ -69,7 +69,7 @@ namespace ConsoleApp
         private static long GetTotalRecordingSize()
         {
             var outputDirectory = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "Data",
                 "AudioRecordings",
                 DateTime.Now.ToString("yyyy-MM-dd")
             );

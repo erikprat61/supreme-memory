@@ -35,7 +35,7 @@ namespace ConsoleApp
         {
             // Create output directory
             _outputDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "Data",
                 "AudioRecordings",
                 DateTime.Now.ToString("yyyy-MM-dd")
             );

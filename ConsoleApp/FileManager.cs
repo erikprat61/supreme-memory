@@ -9,6 +9,17 @@ namespace ConsoleApp
     public class FileManager
     {
         private readonly object _fileOperationLock = new object();
+        private readonly string _baseDirectory;
+
+        public FileManager()
+        {
+            // Use the absolute path to the Data directory
+            _baseDirectory = Path.Combine("Data", "AudioRecordings");
+
+            // Ensure the directory exists
+            if (!Directory.Exists(_baseDirectory))
+                Directory.CreateDirectory(_baseDirectory);
+        }
 
         /// <summary>
         /// Creates the output directory for audio recordings
@@ -17,16 +28,15 @@ namespace ConsoleApp
         public string CreateOutputDirectory()
         {
             // Create output directory with date
-            var baseDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "AudioRecordings",
+            var dateDirectory = Path.Combine(
+                _baseDirectory,
                 DateTime.Now.ToString("yyyy-MM-dd")
             );
 
-            if (!Directory.Exists(baseDirectory))
-                Directory.CreateDirectory(baseDirectory);
+            if (!Directory.Exists(dateDirectory))
+                Directory.CreateDirectory(dateDirectory);
 
-            return baseDirectory;
+            return dateDirectory;
         }
 
         /// <summary>
@@ -53,7 +63,7 @@ namespace ConsoleApp
 
             long totalSize = 0;
             var files = Directory.GetFiles(outputDirectory, "*.mp3");
-            
+
             foreach (var file in files)
             {
                 var fileInfo = new FileInfo(file);
@@ -84,17 +94,12 @@ namespace ConsoleApp
         {
             try
             {
-                var baseDirectory = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "AudioRecordings"
-                );
-
-                if (!Directory.Exists(baseDirectory))
+                if (!Directory.Exists(_baseDirectory))
                     return;
 
                 // Get all date-based subdirectories
-                var directories = Directory.GetDirectories(baseDirectory);
-                
+                var directories = Directory.GetDirectories(_baseDirectory);
+
                 foreach (var directory in directories)
                 {
                     // Try to parse the directory name as a date

@@ -54,7 +54,12 @@ ggml-*.bin
 
 # Audio transcription outputs
 AudioTranscriptions/
+Data/
+Models/
 
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Added for the new LLM model path
+LLM_MODEL_PATH=models
