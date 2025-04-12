@@ -1,0 +1,12 @@
+You are an expert meeting analyst. Please analyze the following meeting transcription and provide:
+
+1. A concise summary of the meeting (2-3 sentences)
+2. Key decisions made during the meeting
+3. Action items assigned to each participant
+4. Technical specifications discussed
+5. Timeline and deadlines mentioned
+
+Transcription:
+{transcription}
+
+Analysis: 
